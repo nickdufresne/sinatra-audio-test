@@ -1,0 +1,146 @@
+<html>
+<head>
+  <script>
+    function setStatus(status) {
+      document.querySelector("#status").innerHTML = status;
+    }
+
+    function sendBlob(blob, name) {
+      const recordingFormData = new FormData();
+      recordingFormData.append("recording", blob, name);
+
+      fetch(`/${name}`, {
+        method: "POST",
+        body: recordingFormData,
+      }).then((response) => {
+        window.location.href = "/";
+      }).catch((err) => {
+        console.error(`Error POSTing recording: ${err}`);
+      });
+    }
+
+    navigator.getUserMedia =
+      navigator.getUserMedia ||
+      navigator.webkitGetUserMedia ||
+      navigator.mozGetUserMedia;
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const testMimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/ogg",
+        "audio/opus"
+      ]
+
+      testMimeTypes.forEach(function(mimeType) {
+        const audioTest = new Audio();
+        console.log(`Can play ${mimeType}: `, audioTest.canPlayType(mimeType));
+        console.log(`Can record ${mimeType}: `, MediaRecorder.isTypeSupported(mimeType));
+      });
+
+
+
+      const recordBtn = document.getElementById("record");
+      const stopBtn = document.getElementById("stop");
+      const playBtn = document.getElementById("play");
+      const sendBtn = document.getElementById("send");
+
+      let mediaChunks = [];
+      let recorder = null;
+      let blob = null;
+
+      // const types = [
+      //   "video/webm",
+      //   "audio/webm",
+      //   "video/webm;codecs=vp8",
+      //   "video/webm;codecs=daala",
+      //   "video/webm;codecs=h264",
+      //   "audio/webm;codecs=opus",
+      //   "video/mp4",
+      //   "audio/mpeg",
+      //   "audio/mp3",
+      //   "audio/mpeg-3"
+      // ];
+
+      // for (const type of types) {
+      //   console.log(
+      //     `Is ${type} supported? ${
+      //       MediaRecorder.isTypeSupported(type) ? "Maybe!" : "Nope :("
+      //     }`,
+      //   );
+      // }
+      let mimeType = "";
+      let extension = "";
+
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus";
+        extension = "webm";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
+        extension = "mp4";
+      } else {
+        mimeType = "audio/mp3";
+        extension = "mp3";
+      }
+
+      console.log({mimeType: mimeType, extension: extension});
+
+      let count = 0;
+
+      recordBtn.onclick = () => {
+        navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false
+        }).then((stream) => {
+          recorder = new MediaRecorder(stream);
+
+          recorder.ondataavailable = (e) => {
+            mediaChunks.push(e.data);
+          };
+
+          recorder.onstop = (e) => {
+            if (mediaChunks.length)
+              blob = new Blob(mediaChunks, { type: mimeType });{
+              sendBlob(blob, `recording.${extension}`);
+            }
+          };
+
+          recorder.start();
+
+          setStatus("recording ...")
+        }).catch((err) => {
+          setStatus(`The following getUserMedia error occurred: ${err}`);
+        });
+      };
+
+      stopBtn.onclick = () => {
+        recorder.stop();
+
+        console.log(recorder.state);
+        console.log("recorder stopped");
+      };
+
+      sendBtn.onclick = () => {
+
+
+
+      };
+    });
+  </script>
+</head>
+<body>
+  <button id="record"> Record </button>
+  <button id="stop"> Stop </button>
+  <button id="play"> Play </button>
+  <button id="send"> Send </button>
+  <p id="status"> Nothing </p>
+  <div id="playback"></div>
+  <% recordings.each do |recording, type| %>
+    <p> <%= recording %> </p>
+    <audio controls>
+      <source src="/recordings/<%= recording %>" type="<%= type %>">
+    </audio>
+  <% end %>
+</body>
+</html>
