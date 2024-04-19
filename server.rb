@@ -5,6 +5,7 @@ Bundler.require
 
 require "sinatra"
 require "sinatra/cors"
+require 'browser'
 
 set :allow_origin, "http://localhost:4567"
 set :allow_methods, "GET,HEAD,POST"
@@ -12,13 +13,14 @@ set :allow_methods, "GET,HEAD,POST"
 
 $recordings_path = File.expand_path("../recordings", __FILE__)
 $mimeTypes = {
+  ".ogg" => "audio/ogg;codecs=opus",
   ".webm" => "audio/webm;codecs=opus",
   ".mp4" => "audio/mp4"
 }
 
 get '/' do
   recordings = []
-  Dir.glob(File.join($recordings_path, "*")).each do |file|
+  Dir.glob(File.join($recordings_path, "*")).sort.reverse.each do |file|
     recordings << [File.basename(file), $mimeTypes[File.extname(file)]]
   end
   puts recordings.inspect
@@ -37,11 +39,13 @@ get '/recordings/:id' do
 end
 
 post '/recording.:type' do
-  upload_file(params, params[:type])
+  browser = Browser.new request.user_agent, accept_language: request.env["HTTP_ACCEPT_LANGUAGE"]
+  upload_file(params, params[:type], browser.name)
   erb "OK"
 end
 
-def upload_file(params, extension)
-  destination = File.join($recordings_path, "#{SecureRandom.hex}.#{extension}")
+def upload_file(params, extension, browser)
+
+  destination = File.join($recordings_path, "#{Time.now.to_i}-#{browser}.#{extension}")
   FileUtils.cp(params[:recording][:tempfile].path, destination)
 end

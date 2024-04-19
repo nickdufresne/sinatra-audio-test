@@ -43,8 +43,6 @@
 
       const recordBtn = document.getElementById("record");
       const stopBtn = document.getElementById("stop");
-      const playBtn = document.getElementById("play");
-      const sendBtn = document.getElementById("send");
 
       let mediaChunks = [];
       let recorder = null;
@@ -73,16 +71,21 @@
       let mimeType = "";
       let extension = "";
 
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+      if (false && MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
+        mimeType = "audio/ogg;codecs=opus";
+        extension = "ogg";
+      } else if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
         extension = "webm";
       } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
         mimeType = "audio/mp4";
         extension = "mp4";
       } else {
-        mimeType = "audio/mp3";
-        extension = "mp3";
+        console.error("No supported audio");
       }
+
+      let mimeTypeElem = document.querySelector("#mime-type");
+      mimeTypeElem.innerHTML = mimeType;
 
       console.log({mimeType: mimeType, extension: extension});
 
@@ -93,7 +96,7 @@
           audio: true,
           video: false
         }).then((stream) => {
-          recorder = new MediaRecorder(stream);
+          recorder = new MediaRecorder(stream, {mimeType: mimeType});
 
           recorder.ondataavailable = (e) => {
             mediaChunks.push(e.data);
@@ -108,7 +111,7 @@
 
           recorder.start();
 
-          setStatus("recording ...")
+          setStatus(`recording ${mimeType}`);
         }).catch((err) => {
           setStatus(`The following getUserMedia error occurred: ${err}`);
         });
@@ -120,21 +123,14 @@
         console.log(recorder.state);
         console.log("recorder stopped");
       };
-
-      sendBtn.onclick = () => {
-
-
-
-      };
     });
   </script>
 </head>
 <body>
+  <p> Record with mimeType: <span id="mime-type"> </span></p>
   <button id="record"> Record </button>
   <button id="stop"> Stop </button>
-  <button id="play"> Play </button>
-  <button id="send"> Send </button>
-  <p id="status"> Nothing </p>
+  <p> Status: <span id="status"> Not Recording </span></p>
   <div id="playback"></div>
   <% recordings.each do |recording, type| %>
     <p> <%= recording %> </p>
